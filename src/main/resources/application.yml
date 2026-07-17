@@ -21,6 +21,8 @@ spring:
 
 server:
   port: 8080
+linkly:
+  base-url: http://localhost:8080
 
 logging:
   level:
