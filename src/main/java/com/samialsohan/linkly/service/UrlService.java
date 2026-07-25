@@ -9,27 +9,28 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.security.SecureRandom;
-
 @Service
 public class UrlService {
 
     private final UrlRepository urlRepository;
     private final Base62Encoder base62Encoder;
+    private final UrlCacheService cache;
     private final String baseUrl;
 
     public UrlService(
             UrlRepository urlRepository,
             Base62Encoder base62Encoder,
+            UrlCacheService cache,
             @Value("${linkly.base-url:http://localhost:8080}") String baseUrl
-    ){
+    ) {
         this.urlRepository = urlRepository;
         this.base62Encoder = base62Encoder;
+        this.cache = cache;
         this.baseUrl = baseUrl;
     }
+
     @Transactional
-    public ShortenResponse shorten(ShortenRequest request)
-    {
+    public ShortenResponse shorten(ShortenRequest request) {
         long nextId = urlRepository.nextCodeSequenceValue();
         String shortCode = base62Encoder.encode(nextId);
 
@@ -40,6 +41,8 @@ public class UrlService {
                 .build();
 
         Url saved = urlRepository.save(url);
+        cache.store(saved.getShortCode(), saved.getLongUrl());
+
         return new ShortenResponse(
                 saved.getShortCode(),
                 baseUrl + "/" + saved.getShortCode(),
@@ -47,14 +50,27 @@ public class UrlService {
                 saved.getCreatedAt(),
                 saved.getExpiresAt()
         );
-
     }
 
-    @Transactional(readOnly = true)
-    public String resolve(String shortCode)
-    {
-        Url url = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new NotFoundException("No URL found for code " + shortCode));
-        return url.getLongUrl();
+    public String resolve(String shortCode) {
+        return switch (cache.lookup(shortCode)) {
+            case CacheLookup.Hit(String longUrl) -> longUrl;
+            case CacheLookup.NegativeHit() -> throw new NotFoundException(
+                    "No URL found for code: " + shortCode);
+            case CacheLookup.Miss() -> resolveFromDatabase(shortCode);
+        };
+    }
+
+    private String resolveFromDatabase(String shortCode) {
+        return urlRepository.findByShortCode(shortCode)
+                .map(url -> {
+                    cache.store(shortCode, url.getLongUrl());
+                    return url.getLongUrl();
+                })
+                .orElseThrow(() -> {
+                    cache.storeNotFound(shortCode);
+                    return new NotFoundException(
+                            "No URL found for code: " + shortCode);
+                });
     }
 }

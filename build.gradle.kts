@@ -23,6 +23,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.flywaydb:flyway-core")
 	implementation("org.flywaydb:flyway-database-postgresql")
+	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 	compileOnly("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	runtimeOnly("org.postgresql:postgresql")
