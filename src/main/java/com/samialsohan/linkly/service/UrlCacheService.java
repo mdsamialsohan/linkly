@@ -40,7 +40,7 @@ public class UrlCacheService {
             }
             if(NOT_FOUND_SENTINEL.equals(value))
             {
-                return new CacheLookup.Hit(value);
+                return new CacheLookup.NegativeHit();
             }
             return new CacheLookup.Hit(value);
         } catch (DataAccessException e){
