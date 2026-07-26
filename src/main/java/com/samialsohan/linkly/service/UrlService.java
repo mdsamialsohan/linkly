@@ -3,6 +3,7 @@ package com.samialsohan.linkly.service;
 import com.samialsohan.linkly.dto.ClickMetadata;
 import com.samialsohan.linkly.dto.ShortenRequest;
 import com.samialsohan.linkly.dto.ShortenResponse;
+import com.samialsohan.linkly.dto.UrlSummaryResponse;
 import com.samialsohan.linkly.entity.Url;
 import com.samialsohan.linkly.event.ClickEvent;
 import com.samialsohan.linkly.exception.NotFoundException;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.List;
 
 @Service
 public class UrlService {
@@ -56,6 +58,19 @@ public class UrlService {
                 saved.getCreatedAt(),
                 saved.getExpiresAt()
         );
+    }
+
+    public List<UrlSummaryResponse> listAll() {
+        return urlRepository.findTop50ByOrderByCreatedAtDesc().stream()
+                .map(url -> new UrlSummaryResponse(
+                        url.getShortCode(),
+                        baseUrl + "/" + url.getShortCode(),
+                        url.getLongUrl(),
+                        url.getCreatedAt(),
+                        url.getExpiresAt(),
+                        url.getClickCount()
+                ))
+                .toList();
     }
 
     public String resolve(String shortCode, ClickMetadata metadata) {

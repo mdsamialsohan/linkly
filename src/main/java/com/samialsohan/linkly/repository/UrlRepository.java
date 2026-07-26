@@ -16,6 +16,7 @@ import java.util.Optional;
 public interface UrlRepository extends JpaRepository<Url, Long> {
     Optional<Url> findByShortCode(String shortCode);
     boolean existsByShortCode(String shortCode);
+    List<Url> findTop50ByOrderByCreatedAtDesc();
     @Query(value = "SELECT nextval('url_code_seq')", nativeQuery = true)
     long nextCodeSequenceValue();
     @Modifying
