@@ -42,7 +42,9 @@ class UrlShorteningIntegrationTest {
     @ServiceConnection
     static org.testcontainers.kafka.KafkaContainer kafka =
             new org.testcontainers.kafka.KafkaContainer(
-                    DockerImageName.parse("apache/kafka:3.9.0"));
+                    // 3.9.0 rejects Testcontainers' advertised-listener setup
+                    // (no CONTROLLER entry); 3.8.0 accepts it.
+                    DockerImageName.parse("apache/kafka:3.8.0"));
 
     @LocalServerPort
     int port;
