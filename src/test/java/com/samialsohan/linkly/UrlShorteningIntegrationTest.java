@@ -38,6 +38,11 @@ class UrlShorteningIntegrationTest {
     static GenericContainer<?> redis =
             new GenericContainer<>(DockerImageName.parse("redis:7-alpine"))
                     .withExposedPorts(6379);
+    @Container
+    @ServiceConnection
+    static org.testcontainers.kafka.KafkaContainer kafka =
+            new org.testcontainers.kafka.KafkaContainer(
+                    DockerImageName.parse("apache/kafka:3.9.0"));
 
     @LocalServerPort
     int port;
@@ -47,6 +52,12 @@ class UrlShorteningIntegrationTest {
 
     @Autowired
     StringRedisTemplate redisTemplate;
+
+    @Autowired
+    com.samialsohan.linkly.repository.UrlRepository urlRepository;
+
+    @Autowired
+    com.samialsohan.linkly.repository.ClickRepository clickRepository;
 
     private String base() {
         return "http://localhost:" + port;
@@ -118,5 +129,27 @@ class UrlShorteningIntegrationTest {
         String cached = redisTemplate.opsForValue().get("url:nosuchcode");
 
         assertEquals("NOT_FOUND", cached);
+    }
+
+    @Test
+    void recordsClickAsynchronously() {
+        ShortenResponse response = restTemplate.postForObject(
+                base() + "/api/shorten",
+                new ShortenRequest("https://example.com/tracked"),
+                ShortenResponse.class
+        );
+
+        ResponseEntity<Void> redirect = noRedirectTemplate().getForEntity(
+                base() + "/" + response.shortCode(), Void.class);
+        assertEquals(HttpStatus.FOUND, redirect.getStatusCode());
+
+        org.awaitility.Awaitility.await()
+                .atMost(java.time.Duration.ofSeconds(10))
+                .untilAsserted(() -> {
+                    assertEquals(1, clickRepository.countByShortCode(response.shortCode()));
+                    long count = urlRepository.findByShortCode(response.shortCode())
+                            .orElseThrow().getClickCount();
+                    assertEquals(1L, count);
+                });
     }
 }

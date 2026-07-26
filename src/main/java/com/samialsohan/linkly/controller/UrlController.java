@@ -1,5 +1,6 @@
 package com.samialsohan.linkly.controller;
 
+import com.samialsohan.linkly.dto.ClickMetadata;
 import com.samialsohan.linkly.dto.ShortenRequest;
 import com.samialsohan.linkly.dto.ShortenResponse;
 import com.samialsohan.linkly.service.UrlService;
@@ -27,9 +28,13 @@ public class UrlController {
     }
 
     @GetMapping("/{shortCode}")
-    public ResponseEntity<Void> redirect(@PathVariable String shortCode)
+    public ResponseEntity<Void> redirect(
+            @PathVariable String shortCode,
+            @RequestHeader(value = "Referer", required = false) String referrer,
+            @RequestHeader(value = "User-Agent", required = false) String userAgent
+    )
     {
-        String longUrl = urlService.resolve(shortCode);
+        String longUrl = urlService.resolve(shortCode, new ClickMetadata(referrer, userAgent));
         return ResponseEntity
                 .status(HttpStatus.FOUND)
                 .location(URI.create(longUrl))
