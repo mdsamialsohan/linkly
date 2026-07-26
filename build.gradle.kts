@@ -25,6 +25,7 @@ dependencies {
 	implementation("org.flywaydb:flyway-database-postgresql")
 	implementation("org.springframework.boot:spring-boot-starter-data-redis")
 	implementation("org.springframework.kafka:spring-kafka")
+	implementation("org.springframework.boot:spring-boot-starter-actuator")
 	compileOnly("org.projectlombok:lombok")
 	developmentOnly("org.springframework.boot:spring-boot-devtools")
 	runtimeOnly("org.postgresql:postgresql")
@@ -41,4 +42,7 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+tasks.named("jar") {
+	enabled = false
 }

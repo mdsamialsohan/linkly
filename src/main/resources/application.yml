@@ -50,6 +50,16 @@ linkly:
   consumer:
     enabled: true
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 logging:
   level:
     org.hibernate.SQL: DEBUG

@@ -10,12 +10,23 @@ services:
       - "5432:5432"
     volumes:
       - linkly-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkly -d linkly"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   redis:
-      image: redis:7-alpine
-      container_name: linkly-redis
-      ports:
-        - "6379:6379"
-      command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    image: redis:7-alpine
+    container_name: linkly-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   kafka:
     image: apache/kafka:3.9.0
@@ -35,6 +46,37 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  app:
+    build: .
+    container_name: linkly-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/linkly
+      SPRING_DATASOURCE_USERNAME: linkly
+      SPRING_DATASOURCE_PASSWORD: linkly
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: "6379"
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+      LINKLY_BASE_URL: http://localhost:8080
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
 
 volumes:
   linkly-pg-data:
