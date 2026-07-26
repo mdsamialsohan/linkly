@@ -59,6 +59,9 @@ class UrlShorteningIntegrationTest {
     @Autowired
     com.samialsohan.linkly.repository.ClickRepository clickRepository;
 
+    @Autowired
+    com.samialsohan.linkly.service.AnalyticsService analyticsService;
+
     private String base() {
         return "http://localhost:" + port;
     }
@@ -151,5 +154,43 @@ class UrlShorteningIntegrationTest {
                             .orElseThrow().getClickCount();
                     assertEquals(1L, count);
                 });
+    }
+
+
+
+    @Test
+    void aggregatesClicksIntoStats() {
+        ShortenResponse response = restTemplate.postForObject(
+                base() + "/api/shorten",
+                new ShortenRequest("https://example.com/analytics"),
+                ShortenResponse.class
+        );
+        String code = response.shortCode();
+
+        // fire 4 clicks
+        for (int i = 0; i < 4; i++) {
+            noRedirectTemplate().getForEntity(base() + "/" + code, Void.class);
+        }
+
+        // wait for the async consumer to catch up
+        org.awaitility.Awaitility.await()
+                .atMost(java.time.Duration.ofSeconds(10))
+                .untilAsserted(() ->
+                        assertEquals(4L, analyticsService.statsFor(code).totalClicks()));
+
+        // rollup should agree with the summary
+        var hourly = analyticsService.hourlyTraffic(code, 24);
+        long rollupTotal = hourly.stream().mapToLong(
+                com.samialsohan.linkly.dto.analytics.HourlyBucket::clicks).sum();
+        assertEquals(4L, rollupTotal);
+    }
+
+    @Test
+    void analyticsForUnknownCodeReturns404() {
+        assertThrows(
+                org.springframework.web.client.HttpClientErrorException.NotFound.class,
+                () -> restTemplate.getForEntity(
+                        base() + "/api/analytics/nope", String.class)
+        );
     }
 }

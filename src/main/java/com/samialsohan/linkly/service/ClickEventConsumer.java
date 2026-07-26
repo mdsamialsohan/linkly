@@ -44,6 +44,7 @@ public class ClickEventConsumer {
         {
             log.warn("Click received for unknown short code '{}'", event.shortCode());
         }
+        clickRepository.incrementHourlyRollup(event.shortCode(), event.clickedAt());
     }
 
     private static String truncate(String value, int max)
