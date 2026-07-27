@@ -1,0 +1,114 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: linkly-postgres
+    environment:
+      POSTGRES_DB: linkly
+      POSTGRES_USER: linkly
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - linkly-pg-data:/var/lib/postgresql/data
+    command: >
+      postgres -c shared_buffers=128MB -c max_connections=50
+      -c effective_cache_size=256MB
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkly -d linkly"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: linkly-redis
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    deploy:
+      resources:
+        limits:
+          memory: 100M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redpanda:
+    image: redpandadata/redpanda:v24.2.7
+    container_name: linkly-redpanda
+    command:
+      - redpanda
+      - start
+      - --overprovisioned
+      - --smp=1
+      - --memory=600M
+      - --reserve-memory=0M
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://redpanda:9092
+    deploy:
+      resources:
+        limits:
+          memory: 700M
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    restart: unless-stopped
+
+  app:
+    image: ghcr.io/mdsamialsohan/linkly-app:latest
+    container_name: linkly-app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/linkly
+      SPRING_DATASOURCE_USERNAME: linkly
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: redpanda:9092
+      LINKLY_BASE_URL: ""
+      LINKLY_CORS_ALLOWED_ORIGINS: "https://linkly.samialsohan.com"
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
+    deploy:
+      resources:
+        limits:
+          memory: 550M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  web:
+    image: ghcr.io/mdsamialsohan/linkly-web:latest
+    container_name: linkly-web
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 96M
+    restart: unless-stopped
+
+volumes:
+  linkly-pg-data:
+  caddy-data:
