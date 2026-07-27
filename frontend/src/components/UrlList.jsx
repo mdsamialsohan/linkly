@@ -34,13 +34,16 @@ export default function UrlList({ urls, loading, error }) {
           <th>Destination</th>
           <th>Clicks</th>
           <th>Created</th>
+          <th>Stats</th>
         </tr>
       </thead>
       <tbody>
         {urls.map((url) => (
           <tr key={url.shortCode}>
             <td>
-              <Link to={`/links/${url.shortCode}`}>{url.shortUrl}</Link>
+              <a href={url.shortUrl} target="_blank" rel="noreferrer">
+                {url.shortUrl}
+              </a>
               <CopyButton text={url.shortUrl} />
             </td>
             <td className="destination" title={url.longUrl}>
@@ -48,6 +51,9 @@ export default function UrlList({ urls, loading, error }) {
             </td>
             <td className="tabular-nums">{url.clickCount}</td>
             <td>{formatDate(url.createdAt)}</td>
+            <td className="stats-cell">
+              <Link to={`/links/${url.shortCode}`}>View stats</Link>
+            </td>
           </tr>
         ))}
       </tbody>

@@ -101,6 +101,10 @@ h1 {
   color: var(--text-secondary);
 }
 
+.url-table .stats-cell {
+  white-space: nowrap;
+}
+
 .copy-button {
   margin-left: 0.5rem;
   padding: 0.15rem 0.5rem;
