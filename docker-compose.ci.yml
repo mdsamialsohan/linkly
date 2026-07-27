@@ -108,7 +108,17 @@ services:
         limits:
           memory: 96M
     restart: unless-stopped
-
+  watchtower:
+    image: containrrr/watchtower
+    container_name: linkly-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 60 --cleanup linkly-app linkly-web
+    deploy:
+      resources:
+        limits:
+          memory: 32M
+    restart: unless-stopped
 volumes:
   linkly-pg-data:
   caddy-data:
