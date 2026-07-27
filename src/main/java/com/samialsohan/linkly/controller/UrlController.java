@@ -35,7 +35,7 @@ public class UrlController {
         return urlService.listAll();
     }
 
-    @GetMapping("/{shortCode}")
+    @GetMapping("/r/{shortCode}")
     public ResponseEntity<Void> redirect(
             @PathVariable String shortCode,
             @RequestHeader(value = "Referer", required = false) String referrer,

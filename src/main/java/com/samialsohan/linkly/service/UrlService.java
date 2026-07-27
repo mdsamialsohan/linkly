@@ -53,7 +53,7 @@ public class UrlService {
 
         return new ShortenResponse(
                 saved.getShortCode(),
-                baseUrl + "/" + saved.getShortCode(),
+                baseUrl + "/r/" + saved.getShortCode(),
                 saved.getLongUrl(),
                 saved.getCreatedAt(),
                 saved.getExpiresAt()
@@ -64,7 +64,7 @@ public class UrlService {
         return urlRepository.findTop50ByOrderByCreatedAtDesc().stream()
                 .map(url -> new UrlSummaryResponse(
                         url.getShortCode(),
-                        baseUrl + "/" + url.getShortCode(),
+                        baseUrl + "/r/" + url.getShortCode(),
                         url.getLongUrl(),
                         url.getCreatedAt(),
                         url.getExpiresAt(),
