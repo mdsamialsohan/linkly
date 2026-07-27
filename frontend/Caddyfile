@@ -1,0 +1,19 @@
+linkly.samialsohan.com {
+    # Reverse-proxy API, redirects, and health to the Spring app
+    handle /api/* {
+        reverse_proxy app:8080
+    }
+    handle /r/* {
+        reverse_proxy app:8080
+    }
+    handle /actuator/* {
+        reverse_proxy app:8080
+    }
+
+    # Everything else: serve the React SPA with client-side routing fallback
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
+    }
+}
