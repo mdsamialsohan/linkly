@@ -109,7 +109,7 @@ services:
           memory: 96M
     restart: unless-stopped
   watchtower:
-    image: containrrr/watchtower
+    image: nickfedor/watchtower:latest
     container_name: linkly-watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
